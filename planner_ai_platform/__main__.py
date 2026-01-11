@@ -1,4 +1,4 @@
-from planner_ai_platform.cli import app
+from planner_ai_platform.cli import main
 
 if __name__ == "__main__":
-    app()
+    main()

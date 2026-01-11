@@ -9,7 +9,14 @@ from planner_ai_platform.core.validate.validate_plan import summarize_plan, vali
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
-@app.command()
+@app.callback()
+def _callback() -> None:
+    """Planner CLI."""
+    # Having a callback forces Typer into multi-command mode (COMMAND [ARGS]...).
+    return
+
+
+@app.command("validate")
 def validate(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)")) -> None:
     """Validate a plan file against schema v0."""
     try:
@@ -35,8 +42,12 @@ def _print_errors(errors: list[PlanError]) -> None:
 
 def main() -> None:
     # console_scripts entrypoint
-    app()
+    app(prog_name="planner")
 
 
 if __name__ == "__main__":
     main()
+
+import typer
+
+cli = typer.main.get_command(app)

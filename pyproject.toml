@@ -21,7 +21,7 @@ dev = [
 ]
 
 [project.scripts]
-planner = "planner_ai_platform.cli:main"
+planner = "planner_ai_platform.cli:cli"
 
 [tool.setuptools]
 package-dir = {"" = "."}
