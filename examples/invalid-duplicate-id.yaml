@@ -1,0 +1,13 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Duplicate"
+    definition_of_done: ["x"]
+    depends_on: []
+
+  - id: OUT-001
+    type: outcome
+    title: "Duplicate again"
+    definition_of_done: ["y"]
+    depends_on: []
