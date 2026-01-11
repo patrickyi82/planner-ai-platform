@@ -19,16 +19,21 @@ dependencies = [
 dev = [
   "pytest>=8.0.0",
 ]
+agents = [
+  "openai>=1.40.0",
+  "rich>=13.7.0",
+]
 
 [project.scripts]
 planner = "planner_ai_platform.cli:cli"
+planner-agent = "planner_agent.cli:cli"
 
 [tool.setuptools]
 package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["planner_ai_platform*"]
+include = ["planner_ai_platform*", "planner_agent*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
