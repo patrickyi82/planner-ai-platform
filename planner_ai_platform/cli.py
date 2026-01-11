@@ -5,7 +5,6 @@ import typer
 from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
 from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
 from planner_ai_platform.core.expand.template_config import (
-    DEFAULT_TEMPLATES,
     TemplateConfigError,
     load_and_merge,
 )
