@@ -11,6 +11,7 @@ pip install -e .[dev]
 
 planner --help
 planner validate examples/basic-plan.yaml
+planner lint examples/basic-plan.yaml
 pytest
 ```
 
