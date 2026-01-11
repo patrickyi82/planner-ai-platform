@@ -1,0 +1,8 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-EXP-001
+    type: outcome
+    title: "Expansion demo outcome"
+    definition_of_done:
+      - "We can expand deterministically"
+    depends_on: []

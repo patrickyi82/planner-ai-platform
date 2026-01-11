@@ -1,0 +1,23 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-EXP-001
+    type: outcome
+    title: "Expansion demo outcome"
+    definition_of_done: ["We can expand deterministically"]
+    depends_on: []
+
+  # Pre-existing deliverable that will collide with DEL-OUT-EXP-001-01
+  - id: DEL-OUT-EXP-001-01
+    type: deliverable
+    title: "Existing deliverable"
+    definition_of_done: ["Exists"]
+    depends_on: ["OUT-EXP-001"]
+
+  # Pre-existing task that will collide with TSK-OUT-EXP-001-02
+  - id: TSK-OUT-EXP-001-02
+    type: task
+    title: "Existing task"
+    definition_of_done: ["Exists"]
+    depends_on: ["DEL-OUT-EXP-001-01"]
+    owner: "someone"
+    estimate_hours: 1

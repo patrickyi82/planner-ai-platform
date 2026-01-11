@@ -53,7 +53,9 @@ A platform that can:
 ## Phase 3 — Expansion engine v0 (deterministic first)
 
 **Acceptance**
-- `planner expand examples/outcome-health.yaml` generates a bigger plan
+- `planner expand examples/expand-input.yaml --out /tmp/expanded.yaml` generates a bigger plan
+- `planner expand ... --template simple|dev|ops` changes deterministic task sets
+- expanded output passes validate + lint
 
 ---
 
