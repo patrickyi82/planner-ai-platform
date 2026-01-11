@@ -3,7 +3,12 @@ from __future__ import annotations
 import typer
 
 from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
-from planner_ai_platform.core.expand.expand_plan import TEMPLATE_TASK_TITLES, dump_plan_yaml, expand_plan_dict
+from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
+from planner_ai_platform.core.expand.template_config import (
+    DEFAULT_TEMPLATES,
+    TemplateConfigError,
+    load_and_merge,
+)
 from planner_ai_platform.core.io.load_plan import load_plan
 from planner_ai_platform.core.lint.lint_plan import lint_plan
 from planner_ai_platform.core.validate.validate_plan import summarize_plan, validate_plan
@@ -55,6 +60,47 @@ def lint(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.
     typer.echo("OK: lint passed")
 
 
+@app.command("templates")
+def templates(
+    template_file: str | None = typer.Option(
+        None,
+        "--template-file",
+        help="Optional YAML file to add/override templates",
+    ),
+) -> None:
+    """List available deterministic expansion templates (Phase 3)."""
+    try:
+        templates_map = load_and_merge(template_file)
+    except FileNotFoundError:
+        _print_errors(
+            [
+                PlanLoadError(
+                    code="E_TEMPLATE_FILE_NOT_FOUND",
+                    message=f"template file not found: {template_file}",
+                    file=None,
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=1)
+    except TemplateConfigError as e:
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_TEMPLATE_FILE_INVALID",
+                    message=str(e),
+                    file=None,
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    typer.echo("Templates:")
+    for name in sorted(templates_map.keys()):
+        typer.echo(f"- {name}: {', '.join(templates_map[name])}")
+
+
 @app.command("expand")
 def expand(
     path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
@@ -64,6 +110,11 @@ def expand(
         "simple",
         "--template",
         help="Expansion template (deterministic): simple|dev|ops",
+    ),
+    template_file: str | None = typer.Option(
+        None,
+        "--template-file",
+        help="Optional YAML file to add/override templates",
     ),
 ) -> None:
     """Deterministically expand outcome roots into deliverables + tasks (Phase 3)."""
@@ -120,12 +171,39 @@ def expand(
             )
             raise typer.Exit(code=2)
 
-    if template not in TEMPLATE_TASK_TITLES:
+    try:
+        templates_map = load_and_merge(template_file)
+    except FileNotFoundError:
+        _print_errors(
+            [
+                PlanLoadError(
+                    code="E_TEMPLATE_FILE_NOT_FOUND",
+                    message=f"template file not found: {template_file}",
+                    file=plan.get("__file__"),
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=1)
+    except TemplateConfigError as e:
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_TEMPLATE_FILE_INVALID",
+                    message=str(e),
+                    file=plan.get("__file__"),
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    if template not in templates_map:
         _print_errors(
             [
                 PlanValidationError(
                     code="E_EXPAND_UNKNOWN_TEMPLATE",
-                    message=f"unknown template: {template} (choose one of: {', '.join(sorted(TEMPLATE_TASK_TITLES.keys()))})",
+                    message=f"unknown template: {template} (choose one of: {', '.join(sorted(templates_map.keys()))})",
                     file=plan.get("__file__"),
                     path="template",
                 )
@@ -133,7 +211,7 @@ def expand(
         )
         raise typer.Exit(code=2)
 
-    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots, template=template)
+    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots, template=template, templates=templates_map)
 
     # Must pass validate + lint
     g2, v2 = validate_plan(expanded)

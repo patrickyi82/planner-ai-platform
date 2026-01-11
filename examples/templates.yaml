@@ -1,0 +1,17 @@
+# Optional template config file example.
+# You can add new templates or override defaults.
+#
+# example:
+# dev:
+#   - Design
+#   - Implement
+#   - Test
+#   - Docs
+#   - Review
+#   - Release
+
+custom:
+  - Align
+  - Build
+  - Verify
+  - Ship

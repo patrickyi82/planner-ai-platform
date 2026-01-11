@@ -4,16 +4,7 @@ from typing import Any
 
 import yaml
 
-
-TEMPLATE_TASK_TITLES: dict[str, list[str]] = {
-    # Phase 3 baseline: keep this stable for golden tests.
-    "simple": ["Design", "Implement", "Test", "Docs"],
-    # Slightly richer dev lifecycle.
-    "dev": ["Design", "Implement", "Test", "Docs", "Review", "Release"],
-    # Ops-focused expansion.
-    # (Avoid using terms that can be interpreted as emergency/dispatch language.)
-    "ops": ["Monitoring", "SLOs", "Runbooks", "Playbooks", "Reliability"],
-}
+from planner_ai_platform.core.expand.template_config import DEFAULT_TEMPLATES
 
 
 def expand_plan_dict(
@@ -21,12 +12,16 @@ def expand_plan_dict(
     *,
     outcome_root_ids: list[str],
     template: str = "simple",
+    templates: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Return a new expanded plan dict (deterministic, no AI).
 
+    Parameters:
+      template: template name (e.g. simple/dev/ops)
+      templates: optional mapping of template->task titles. If omitted, DEFAULT_TEMPLATES is used.
+
     Notes:
     - This function is intentionally pure/deterministic for Phase 3.
-    - Callers should validate `template` against TEMPLATE_TASK_TITLES.
     """
 
     schema_version = plan.get("schema_version")
@@ -45,7 +40,8 @@ def expand_plan_dict(
         out["nodes"] = nodes
         return out
 
-    task_titles = TEMPLATE_TASK_TITLES.get(template, TEMPLATE_TASK_TITLES["simple"])
+    tpl_map = templates or DEFAULT_TEMPLATES
+    task_titles = tpl_map.get(template, tpl_map.get("simple", DEFAULT_TEMPLATES["simple"]))
 
     existing_ids = _collect_existing_ids(nodes)
     new_nodes: list[dict[str, Any]] = []
