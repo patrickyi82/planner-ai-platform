@@ -39,6 +39,7 @@ nodes:
     definition_of_done:
       - "Schema + roots + referential checks"
     depends_on: ["DEL-001"]
+    owner: "platform"
     estimate_hours: 6
 
   - id: CHK-001
