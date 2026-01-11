@@ -1,0 +1,6 @@
+id: lint-v0
+goal: "Implement planner lint with rules: non-empty DoD for tasks/checks; summarize unknown dependencies; enforce unique IDs with clear errors. Add tests and docs."
+acceptance:
+  - "All tests pass (pytest)"
+  - "planner validate examples/basic-plan.yaml passes"
+tags: ["dev"]

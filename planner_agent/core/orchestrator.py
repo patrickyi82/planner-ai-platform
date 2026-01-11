@@ -38,7 +38,7 @@ PATCH_SCHEMA: dict[str, Any] = {
                 },
             },
         },
-        "required": ["summary", "edits"],
+        "required": ["summary", "edits", "confidence"],
     },
 }
 
@@ -69,11 +69,11 @@ def _effective_gates() -> list[Gate]:
     return gates
 
 
-async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_rounds: int = 3) -> RunResult:
+async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_rounds: int = 3, model: str | None = None) -> RunResult:
     snapshot = RepoSnapshot(root=repo_root)
     repomap = build_repomap(snapshot).to_text()
 
-    llm = LLMClient()
+    llm = LLMClient(model=model)
     prompts = DEFAULT_PROMPTS
 
     sem = asyncio.Semaphore(max(1, workers))
@@ -133,7 +133,24 @@ async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_
                 applied.append(fix_patch)
                 gates = run_gates(repo_root, _effective_gates())
 
-            return RunResult(ok=gates[-1].ok, applied_patches=applied, gates=gates)
+            return RunResult(
+                ok=gates[-1].ok,
+                applied_patches=applied,
+                gates=gates,
+                model=llm.model,
+                llm_calls=llm.calls,
+                llm_input_tokens=llm.input_tokens,
+                llm_output_tokens=llm.output_tokens,
+            )
 
     gates = run_gates(repo_root, _effective_gates())
-    return RunResult(ok=gates[-1].ok, applied_patches=applied, gates=gates)
+    return RunResult(
+        ok=gates[-1].ok,
+        applied_patches=applied,
+        gates=gates,
+        model=llm.model,
+        llm_calls=llm.calls,
+        llm_input_tokens=llm.input_tokens,
+        llm_output_tokens=llm.output_tokens,
+    )
+
