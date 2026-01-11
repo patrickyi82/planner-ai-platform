@@ -1,0 +1,7 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Bad depends"
+    definition_of_done: ["x"]
+    depends_on: "OUT-000"
