@@ -23,7 +23,9 @@ def _task_titles(plan: dict) -> list[str]:
 
 def test_expand_template_dev(tmp_path: Path):
     out_path = tmp_path / "expanded-dev.yaml"
-    r = runner.invoke(app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "dev"])
+    r = runner.invoke(
+        app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "dev"]
+    )
     assert r.exit_code == 0, r.stdout + r.stderr
 
     got = _load_yaml(out_path)
@@ -37,7 +39,9 @@ def test_expand_template_dev(tmp_path: Path):
 
 def test_expand_template_ops(tmp_path: Path):
     out_path = tmp_path / "expanded-ops.yaml"
-    r = runner.invoke(app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "ops"])
+    r = runner.invoke(
+        app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "ops"]
+    )
     assert r.exit_code == 0, r.stdout + r.stderr
 
     got = _load_yaml(out_path)
@@ -50,6 +54,8 @@ def test_expand_template_ops(tmp_path: Path):
 
 def test_expand_unknown_template_errors(tmp_path: Path):
     out_path = tmp_path / "expanded-unknown.yaml"
-    r = runner.invoke(app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "nope"])
+    r = runner.invoke(
+        app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--template", "nope"]
+    )
     assert r.exit_code != 0
     assert "E_EXPAND_UNKNOWN_TEMPLATE" in (r.stdout + r.stderr)

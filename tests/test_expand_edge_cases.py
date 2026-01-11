@@ -16,7 +16,9 @@ def _load_yaml(p: Path) -> dict:
 
 def test_expand_id_collisions(tmp_path: Path):
     out_path = tmp_path / "expanded.yaml"
-    r = runner.invoke(app, ["expand", "examples/expand-collision-input.yaml", "--out", str(out_path)])
+    r = runner.invoke(
+        app, ["expand", "examples/expand-collision-input.yaml", "--out", str(out_path)]
+    )
     assert r.exit_code == 0, r.stdout + r.stderr
 
     got = _load_yaml(out_path)
@@ -31,6 +33,8 @@ def test_expand_id_collisions(tmp_path: Path):
 
 def test_expand_unknown_root_errors(tmp_path: Path):
     out_path = tmp_path / "expanded.yaml"
-    r = runner.invoke(app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--root", "NOPE-123"])
+    r = runner.invoke(
+        app, ["expand", "examples/expand-input.yaml", "--out", str(out_path), "--root", "NOPE-123"]
+    )
     assert r.exit_code != 0
     assert "E_EXPAND_UNKNOWN_ROOT" in (r.stdout + r.stderr)

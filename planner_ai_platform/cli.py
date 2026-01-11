@@ -23,7 +23,9 @@ def _callback() -> None:
 
 
 @app.command("validate")
-def validate(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)")) -> None:
+def validate(
+    path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
+) -> None:
     """Validate a plan file against schema v0."""
     try:
         plan = load_plan(path)
@@ -167,7 +169,9 @@ def expand(
             raise typer.Exit(code=2)
         outcome_roots = [root]
     else:
-        outcome_roots = sorted([rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"])
+        outcome_roots = sorted(
+            [rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"]
+        )
         if not outcome_roots:
             _print_errors(
                 [

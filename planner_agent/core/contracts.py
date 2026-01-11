@@ -48,4 +48,3 @@ class RunResult:
     llm_calls: int = 0
     llm_input_tokens: int = 0
     llm_output_tokens: int = 0
-
