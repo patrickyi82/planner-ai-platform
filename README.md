@@ -14,6 +14,18 @@ planner validate examples/basic-plan.yaml
 pytest
 ```
 
+## Agent runner (local)
+
+```bash
+# Adds OpenAI + rich
+pip install -e .[dev,agents]
+
+planner-agent repomap
+planner-agent run "Add a new lint command"
+```
+
+See `docs/AGENTS.md`.
+
 ## Status
 
 - Phase 1 (in progress): schema v0 + loader + validator + `planner validate`
