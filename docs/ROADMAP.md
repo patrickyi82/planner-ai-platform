@@ -37,8 +37,16 @@ A platform that can:
 
 **Goal:** enforce “holistic and consistent” plans across domains.
 
+**SDF v0 rules (implemented)**
+- `L_DUPLICATE_ID`: duplicate node IDs
+- `L_EMPTY_DEFINITION_OF_DONE`: tasks/checks must have at least 1 DoD item
+- `L_TASK_MISSING_OWNER`: tasks must specify a non-empty owner
+- `L_UNREACHABLE_NODE`: node not reachable from selected roots (root_ids or inferred roots)
+- `L_CYCLE_DETECTED`: dependency cycle exists
+
 **Acceptance**
-- `planner lint examples/basic-plan.yaml` returns PASS or actionable missing items
+- `planner lint examples/basic-plan.yaml` returns PASS
+- Violations produce actionable errors with file + path + code + message
 
 ---
 

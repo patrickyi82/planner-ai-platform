@@ -52,7 +52,7 @@ def run_gate(repo_root: Path, gate: Gate, timeout_s: int = 900) -> GateResult:
             timeout=timeout_s,
             env=env,
         )
-        cmd_str = "python -m pytest -q"
+        cmd_str = " ".join(["python", "-m", "pytest", "-q"])
 
     # Avoid importing Typer for validation gates; call core validate directly.
     elif gate.name == "planner-validate":
@@ -86,7 +86,6 @@ def run_gate(repo_root: Path, gate: Gate, timeout_s: int = 900) -> GateResult:
             env=env,
         )
         cmd_str = gate.command
-
     output = (proc.stdout or "") + (proc.stderr or "")
     return GateResult(
         ok=(proc.returncode == 0),
