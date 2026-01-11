@@ -13,13 +13,13 @@ class LLMResponse:
 
 
 class LLMClient:
-    """Thin wrapper around the OpenAI API.
-
-    Uses the Responses API. For Structured Outputs, Responses uses `text.format` (not `response_format`).
-    """
+    """Thin wrapper around the OpenAI API (Responses API)."""
 
     def __init__(self, model: str | None = None) -> None:
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5-mini")
+        self.calls = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
 
     def is_configured(self) -> bool:
         return bool(os.getenv("OPENAI_API_KEY"))
@@ -29,8 +29,8 @@ class LLMClient:
 
         If OPENAI_API_KEY is not set, returns a stub response to keep the runner usable.
         """
-
         if not self.is_configured():
+            self.calls += 1
             return LLMResponse(
                 text=json.dumps(
                     {
@@ -42,16 +42,12 @@ class LLMClient:
                 raw={"disabled": True},
             )
 
-        # Import only when needed so the repo works without the agents extra.
         from openai import OpenAI  # type: ignore
 
         client = OpenAI()
 
         kwargs: dict[str, Any] = {}
         if json_schema is not None:
-            # Responses API structured outputs: text.format
-            # Expected shape:
-            # text={"format": {"type":"json_schema", "name":..., "strict": True, "schema": {...}}}
             kwargs["text"] = {
                 "format": {
                     "type": "json_schema",
@@ -70,5 +66,21 @@ class LLMClient:
             **kwargs,
         )
 
+        self.calls += 1
+        self._accumulate_usage(response)
+
         text = getattr(response, "output_text", None) or ""
         return LLMResponse(text=text, raw=response)
+
+    def _accumulate_usage(self, response: Any) -> None:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return
+
+        def get(k: str) -> int:
+            if isinstance(usage, dict):
+                return int(usage.get(k, 0) or 0)
+            return int(getattr(usage, k, 0) or 0)
+
+        self.input_tokens += get("input_tokens")
+        self.output_tokens += get("output_tokens")
