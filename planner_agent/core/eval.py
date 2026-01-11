@@ -148,6 +148,7 @@ def run_eval(
                             "calls": getattr(rr, "llm_calls", 0),
                             "input_tokens": getattr(rr, "llm_input_tokens", 0),
                             "output_tokens": getattr(rr, "llm_output_tokens", 0),
+                            "models_used": getattr(rr, "models_used", {}),
                         },
                     }
                     f.write(json.dumps(record) + "\n")

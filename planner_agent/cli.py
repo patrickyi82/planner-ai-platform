@@ -14,6 +14,7 @@ except Exception:  # pragma: no cover
 
 from planner_agent.core.orchestrator import default_slice, run_slice
 from planner_agent.core.repo import find_repo_root
+from planner_agent.core.eval import run_eval
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 console = Console() if Console else None
@@ -88,6 +89,55 @@ def run_cmd(
         print(rr.gates[-1].output)
         raise typer.Exit(code=2)
 
+@app.command("eval")
+def eval_cmd(
+    suite: Path = typer.Option(..., "--suite", help="Suite file or directory (YAML)"),
+    models: list[str] = typer.Option(..., "--model", "-m", help="Model (repeatable): -m gpt-5-mini -m gpt-5.2-pro"),
+    runs: int = typer.Option(3, help="Runs per case per model"),
+    workers: int = typer.Option(3, help="Concurrent workers for proposal generation"),
+    max_fix_rounds: int = typer.Option(3, help="Max fixer iterations after failed gate"),
+    out: Path = typer.Option(Path("eval/results.jsonl"), "--out", help="Output JSONL path"),
+    allow_dirty: bool = typer.Option(False, help="Allow uncommitted changes (only safe with --no-worktrees)"),
+    no_worktrees: bool = typer.Option(False, "--no-worktrees", help="Run eval in-place (unsafe; modifies your working tree)"),
+    keep_worktrees: bool = typer.Option(False, help="Keep worktrees (debugging)"),
+) -> None:
+    """Benchmark models against a suite; writes JSONL and prints a summary."""
+    summary = run_eval(
+        suite_path=suite,
+        models=models,
+        runs=runs,
+        workers=workers,
+        max_fix_rounds=max_fix_rounds,
+        out_jsonl=out,
+        allow_dirty=allow_dirty,
+        use_worktrees=(not no_worktrees),
+        keep_worktrees=keep_worktrees,
+    )
+
+    if console and Table:
+        table = Table(title=f"planner-agent eval ({summary['cases']} cases)")
+        table.add_column("Model")
+        table.add_column("Runs")
+        table.add_column("Success")
+        table.add_column("Avg sec")
+        table.add_column("Avg fixes")
+        table.add_column("Avg in tok")
+        table.add_column("Avg out tok")
+
+        for m, s in summary["summary"].items():
+            table.add_row(
+                m,
+                str(s["runs"]),
+                f"{s['success_rate']*100:.0f}%",
+                f"{s['avg_seconds']:.2f}",
+                f"{s['avg_fix_patches']:.2f}",
+                f"{s['avg_input_tokens']:.0f}",
+                f"{s['avg_output_tokens']:.0f}",
+            )
+        console.print(table)
+        console.print(f"\nWrote: {summary['out']}")
+    else:
+        print(summary)
 
 def main() -> None:
     app(prog_name="planner-agent")
