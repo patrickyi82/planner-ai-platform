@@ -1,0 +1,22 @@
+schema_version: "0.1.0"
+root_ids: ["OUT-001"]
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Root"
+    definition_of_done: ["x"]
+    depends_on: []
+
+  - id: TSK-001
+    type: task
+    title: "Reachable"
+    definition_of_done: ["done"]
+    depends_on: ["OUT-001"]
+    owner: "platform"
+
+  - id: TSK-999
+    type: task
+    title: "Unreachable"
+    definition_of_done: ["done"]
+    depends_on: []
+    owner: "platform"
