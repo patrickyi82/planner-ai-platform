@@ -36,7 +36,7 @@ jobs:
       - name: Pytest
         run: pytest
 
-      - name: CLI smoke: validate + lint + expand
+      - name: "CLI smoke: validate + lint + expand"
         run: |
           planner validate examples/basic-plan.yaml
           planner lint examples/basic-plan.yaml
