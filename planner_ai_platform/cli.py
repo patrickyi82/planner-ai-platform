@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import typer
 
-from planner_ai_platform.core.errors import PlanError, PlanLoadError
+from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
+from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
 from planner_ai_platform.core.io.load_plan import load_plan
 from planner_ai_platform.core.lint.lint_plan import lint_plan
 from planner_ai_platform.core.validate.validate_plan import summarize_plan, validate_plan
@@ -13,7 +14,6 @@ app = typer.Typer(add_completion=False, no_args_is_help=True)
 @app.callback()
 def _callback() -> None:
     """Planner CLI."""
-    # Having a callback forces Typer into multi-command mode (COMMAND [ARGS]...).
     return
 
 
@@ -38,7 +38,6 @@ def validate(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.y
 @app.command("lint")
 def lint(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)")) -> None:
     """Lint a plan file (rules beyond minimal schema validation)."""
-
     try:
         plan = load_plan(path)
     except PlanLoadError as e:
@@ -46,8 +45,6 @@ def lint(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.
         raise typer.Exit(code=1)
 
     lint_errors = lint_plan(plan)
-
-    # Optionally also include schema/validation errors so the user gets a full picture.
     _, validation_errors = validate_plan(plan)
 
     errors = lint_errors + validation_errors
@@ -58,6 +55,79 @@ def lint(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.
     typer.echo("OK: lint passed")
 
 
+@app.command("expand")
+def expand(
+    path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
+    out: str = typer.Option(..., "--out", help="Path to write expanded YAML plan"),
+    root: str | None = typer.Option(None, "--root", help="Expand only this OUTCOME node id"),
+) -> None:
+    """Deterministically expand outcome roots into deliverables + tasks (Phase 3)."""
+    try:
+        plan = load_plan(path)
+    except PlanLoadError as e:
+        _print_errors([e])
+        raise typer.Exit(code=1)
+
+    graph, errors = validate_plan(plan)
+    if errors or graph is None:
+        _print_errors(errors)
+        raise typer.Exit(code=2)
+
+    # Select outcome roots
+    if root is not None:
+        if root not in graph.nodes_by_id:
+            _print_errors(
+                [
+                    PlanValidationError(
+                        code="E_EXPAND_UNKNOWN_ROOT",
+                        message=f"--root references unknown id: {root}",
+                        file=plan.get("__file__"),
+                        path="root",
+                    )
+                ]
+            )
+            raise typer.Exit(code=2)
+        if graph.nodes_by_id[root].type != "outcome":
+            _print_errors(
+                [
+                    PlanValidationError(
+                        code="E_EXPAND_UNSUPPORTED_ROOT_TYPE",
+                        message=f"--root must be type=outcome, got type={graph.nodes_by_id[root].type}",
+                        file=plan.get("__file__"),
+                        path="root",
+                    )
+                ]
+            )
+            raise typer.Exit(code=2)
+        outcome_roots = [root]
+    else:
+        outcome_roots = sorted([rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"])
+        if not outcome_roots:
+            _print_errors(
+                [
+                    PlanValidationError(
+                        code="E_EXPAND_NO_OUTCOME_ROOTS",
+                        message="no outcome roots to expand (roots exist, but none are type=outcome)",
+                        file=plan.get("__file__"),
+                        path="root_ids",
+                    )
+                ]
+            )
+            raise typer.Exit(code=2)
+
+    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots)
+
+    # Must pass validate + lint
+    g2, v2 = validate_plan(expanded)
+    l2 = lint_plan(expanded)
+    if v2 or l2 or g2 is None:
+        _print_errors(l2 + v2)
+        raise typer.Exit(code=2)
+
+    dump_plan_yaml(expanded, out)
+    typer.echo(f"OK: wrote expanded plan to {out}")
+
+
 def _print_errors(errors: list[PlanError]) -> None:
     errors_sorted = sorted(errors, key=lambda e: (e.file or "", e.path or "", e.code))
     for e in errors_sorted:
@@ -65,13 +135,10 @@ def _print_errors(errors: list[PlanError]) -> None:
 
 
 def main() -> None:
-    # console_scripts entrypoint
     app(prog_name="planner")
 
 
+cli = typer.main.get_command(app)
+
 if __name__ == "__main__":
     main()
-
-import typer
-
-cli = typer.main.get_command(app)

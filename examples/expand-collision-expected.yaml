@@ -1,0 +1,71 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-EXP-001
+    type: outcome
+    title: "Expansion demo outcome"
+    definition_of_done: ["We can expand deterministically"]
+    depends_on: []
+
+  - id: DEL-OUT-EXP-001-01
+    type: deliverable
+    title: "Existing deliverable"
+    definition_of_done: ["Exists"]
+    depends_on: ["OUT-EXP-001"]
+
+  - id: TSK-OUT-EXP-001-02
+    type: task
+    title: "Existing task"
+    definition_of_done: ["Exists"]
+    depends_on: ["DEL-OUT-EXP-001-01"]
+    owner: "someone"
+    estimate_hours: 1
+
+  # New deliverable uses -A due to collision
+  - id: DEL-OUT-EXP-001-01-A
+    type: deliverable
+    title: "Deliver: OUT-EXP-001"
+    definition_of_done:
+      - "Implementation complete"
+      - "Reviewed and accepted"
+    depends_on:
+      - OUT-EXP-001
+
+  - id: TSK-OUT-EXP-001-01
+    type: task
+    title: "Design: OUT-EXP-001"
+    definition_of_done: ["Design complete"]
+    depends_on:
+      - DEL-OUT-EXP-001-01-A
+    owner: "auto"
+    estimate_hours: 1
+
+  # Task 02 uses -A due to collision
+  - id: TSK-OUT-EXP-001-02-A
+    type: task
+    title: "Implement: OUT-EXP-001"
+    definition_of_done: ["Implement complete"]
+    depends_on:
+      - DEL-OUT-EXP-001-01-A
+      - TSK-OUT-EXP-001-01
+    owner: "auto"
+    estimate_hours: 1
+
+  - id: TSK-OUT-EXP-001-03
+    type: task
+    title: "Test: OUT-EXP-001"
+    definition_of_done: ["Test complete"]
+    depends_on:
+      - DEL-OUT-EXP-001-01-A
+      - TSK-OUT-EXP-001-02-A
+    owner: "auto"
+    estimate_hours: 1
+
+  - id: TSK-OUT-EXP-001-04
+    type: task
+    title: "Docs: OUT-EXP-001"
+    definition_of_done: ["Docs complete"]
+    depends_on:
+      - DEL-OUT-EXP-001-01-A
+      - TSK-OUT-EXP-001-03
+    owner: "auto"
+    estimate_hours: 1
