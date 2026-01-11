@@ -31,6 +31,8 @@ A platform that can:
 - `planner validate examples/basic-plan.yaml` passes
 - Bad input produces actionable errors
 
+**Status:** implemented ✅
+
 ---
 
 ## Phase 2 — Standard Delivery Framework (SDF) v0 + linter
@@ -48,14 +50,31 @@ A platform that can:
 - `planner lint examples/basic-plan.yaml` returns PASS
 - Violations produce actionable errors with file + path + code + message
 
+**Status:** implemented ✅
+
 ---
 
 ## Phase 3 — Expansion engine v0 (deterministic first)
+
+**Goal:** deterministically expand outcome roots into a canonical deliverable + task chain.
+
+**Implemented**
+- Built-in templates: `simple`, `dev`, `ops`
+- External template config via `--template-file`
+- Expansion modes:
+  - `append`: always create a new chain
+  - `merge`: idempotent; reuse nodes; never edit existing nodes
+  - `reconcile`: idempotent + repair canonical chain fields/deps
+- Scope-safe reconcile:
+  - `--reconcile-strict` (default): only reuse tasks already scoped to the chosen deliverable
+  - `--reconcile-loose`: allow title-only fallback
 
 **Acceptance**
 - `planner expand examples/expand-input.yaml --out /tmp/expanded.yaml` generates a bigger plan
 - `planner expand ... --template simple|dev|ops` changes deterministic task sets
 - expanded output passes validate + lint
+
+**Status:** implemented ✅
 
 ---
 

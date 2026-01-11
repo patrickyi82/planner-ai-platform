@@ -6,18 +6,18 @@ nodes:
     definition_of_done: ["We can expand deterministically"]
     depends_on: []
 
-  # Two deliverables with the SAME title. We deterministically choose the lowest id.
+  # Two deliverables with the SAME title. Reconcile chooses the lowest id deterministically.
   - id: DEL-OUT-EXP-001-01
     type: deliverable
     title: "Deliver: OUT-EXP-001"
     definition_of_done: ["Implementation complete"]
-    depends_on: []
+    depends_on: ["OUT-EXP-001"]
 
   - id: DEL-OUT-EXP-001-01-A
     type: deliverable
     title: "Deliver: OUT-EXP-001"
     definition_of_done: ["Implementation complete"]
-    depends_on: []
+    depends_on: ["OUT-EXP-001"]
 
   # Task with same title but scoped to the *other* deliverable.
   - id: TSK-FOREIGN-01
