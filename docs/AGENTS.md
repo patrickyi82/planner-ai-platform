@@ -21,7 +21,14 @@ planner-agent repomap
 ```bash
 # With OPENAI_API_KEY set, this will ask multiple agents to propose patches, apply them,
 # then run gates (pytest + planner validate).
-planner-agent run "Add a new lint command that checks for duplicate IDs"
+planner-agent run "Implement SDF v0 lint rules" --workers 3
+```
+
+### Use lint
+
+```bash
+planner lint examples/basic-plan.yaml
+planner lint examples/invalid-cycle.yaml
 ```
 
 ## Safety and quality

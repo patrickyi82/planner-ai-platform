@@ -1,0 +1,21 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Root"
+    definition_of_done: ["x"]
+    depends_on: []
+
+  - id: TSK-001
+    type: task
+    title: "A"
+    definition_of_done: ["a"]
+    depends_on: ["TSK-002"]
+    owner: "platform"
+
+  - id: TSK-002
+    type: task
+    title: "B"
+    definition_of_done: ["b"]
+    depends_on: ["TSK-001"]
+    owner: "platform"

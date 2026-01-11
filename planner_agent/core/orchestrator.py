@@ -11,7 +11,7 @@ from planner_agent.core.contracts import FileEdit, Patch, RunResult
 import os
 
 from planner_agent.core.gates import DEFAULT_GATES, Gate, run_gates
-from planner_agent.core.llm import LLMClient
+from planner_agent.core.llm import LLMClient, model_for_role
 from planner_agent.core.prompts import DEFAULT_PROMPTS
 from planner_agent.core.repomap import build_repomap
 from planner_agent.core.repo import RepoSnapshot
@@ -38,7 +38,7 @@ PATCH_SCHEMA: dict[str, Any] = {
                 },
             },
         },
-        "required": ["summary", "edits"],
+        "required": ["summary", "edits", "confidence"],
     },
 }
 
@@ -69,18 +69,19 @@ def _effective_gates() -> list[Gate]:
     return gates
 
 
-async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_rounds: int = 3) -> RunResult:
+async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_rounds: int = 3, model: str | None = None) -> RunResult:
     snapshot = RepoSnapshot(root=repo_root)
     repomap = build_repomap(snapshot).to_text()
 
-    llm = LLMClient()
+    llm = LLMClient(default_model=model)
     prompts = DEFAULT_PROMPTS
 
     sem = asyncio.Semaphore(max(1, workers))
 
     async def ask(role: str, system: str, user: str) -> Patch:
+        role_model = model_for_role(role, llm.default_model)
         async with sem:
-            resp = await asyncio.to_thread(llm.respond, system, user, PATCH_SCHEMA)
+            resp = await asyncio.to_thread(llm.respond, system, user, PATCH_SCHEMA, role_model)
         try:
             data = json.loads(resp.text)
         except Exception:
@@ -133,7 +134,26 @@ async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_
                 applied.append(fix_patch)
                 gates = run_gates(repo_root, _effective_gates())
 
-            return RunResult(ok=gates[-1].ok, applied_patches=applied, gates=gates)
+            return RunResult(
+                ok=gates[-1].ok,
+                applied_patches=applied,
+                gates=gates,
+                model=llm.default_model,
+                models_used=llm.models_used,
+                llm_calls=llm.calls,
+                llm_input_tokens=llm.input_tokens,
+                llm_output_tokens=llm.output_tokens,
+            )
 
     gates = run_gates(repo_root, _effective_gates())
-    return RunResult(ok=gates[-1].ok, applied_patches=applied, gates=gates)
+    return RunResult(
+        ok=gates[-1].ok,
+        applied_patches=applied,
+        gates=gates,
+        model=llm.default_model,
+        models_used=llm.models_used,
+        llm_calls=llm.calls,
+        llm_input_tokens=llm.input_tokens,
+        llm_output_tokens=llm.output_tokens,
+    )
+

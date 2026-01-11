@@ -1,0 +1,6 @@
+id: smoke
+goal: "No-op evaluation smoke test (should pass gates even without API key)."
+acceptance:
+  - "All tests pass (pytest)"
+  - "planner validate examples/basic-plan.yaml passes"
+tags: ["smoke"]
