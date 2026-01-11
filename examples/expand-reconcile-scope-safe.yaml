@@ -1,0 +1,29 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-EXP-001
+    type: outcome
+    title: "Expansion demo outcome"
+    definition_of_done: ["We can expand deterministically"]
+    depends_on: []
+
+  # Two deliverables with the SAME title. We deterministically choose the lowest id.
+  - id: DEL-OUT-EXP-001-01
+    type: deliverable
+    title: "Deliver: OUT-EXP-001"
+    definition_of_done: ["Implementation complete"]
+    depends_on: []
+
+  - id: DEL-OUT-EXP-001-01-A
+    type: deliverable
+    title: "Deliver: OUT-EXP-001"
+    definition_of_done: ["Implementation complete"]
+    depends_on: []
+
+  # Task with same title but scoped to the *other* deliverable.
+  - id: TSK-FOREIGN-01
+    type: task
+    title: "Design: OUT-EXP-001"
+    definition_of_done: ["Already belongs elsewhere"]
+    depends_on: ["DEL-OUT-EXP-001-01-A"]
+    owner: "someone"
+    estimate_hours: 1

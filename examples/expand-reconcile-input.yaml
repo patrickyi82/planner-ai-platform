@@ -1,0 +1,43 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-EXP-001
+    type: outcome
+    title: "Expansion demo outcome"
+    definition_of_done: ["We can expand deterministically"]
+    depends_on: []
+
+  # Deliverable exists but is broken (missing correct depends_on + weak DoD)
+  - id: DEL-OUT-EXP-001-01
+    type: deliverable
+    title: "Deliver: OUT-EXP-001"
+    definition_of_done: ["Implementation complete"]
+    depends_on: []
+
+  # Tasks exist but are broken (missing deps, missing owner, empty DoD)
+  - id: TSK-OUT-EXP-001-01
+    type: task
+    title: "Design: OUT-EXP-001"
+    definition_of_done: []
+    depends_on: ["DEL-OUT-EXP-001-01"]
+
+  - id: TSK-OUT-EXP-001-02
+    type: task
+    title: "Implement: OUT-EXP-001"
+    definition_of_done: []
+    depends_on: ["DEL-OUT-EXP-001-01"]
+    owner: ""
+    estimate_hours: 0
+
+  - id: TSK-OUT-EXP-001-03
+    type: task
+    title: "Test: OUT-EXP-001"
+    definition_of_done: []
+    depends_on: ["DEL-OUT-EXP-001-01"]
+
+  - id: TSK-OUT-EXP-001-04
+    type: task
+    title: "Docs: OUT-EXP-001"
+    definition_of_done: ["Docs complete"]
+    depends_on: ["DEL-OUT-EXP-001-01"]
+    owner: "someone"
+    estimate_hours: 1

@@ -116,6 +116,16 @@ def expand(
         "--template-file",
         help="Optional YAML file to add/override templates",
     ),
+    mode: str = typer.Option(
+        "append",
+        "--mode",
+        help="Expansion mode: append (default), merge (idempotent), or reconcile (repair)",
+    ),
+    reconcile_strict: bool = typer.Option(
+        True,
+        "--reconcile-strict/--reconcile-loose",
+        help="In reconcile mode, only reuse tasks already scoped to the chosen deliverable",
+    ),
 ) -> None:
     """Deterministically expand outcome roots into deliverables + tasks (Phase 3)."""
     try:
@@ -211,7 +221,27 @@ def expand(
         )
         raise typer.Exit(code=2)
 
-    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots, template=template, templates=templates_map)
+    if mode not in ("append", "merge", "reconcile"):
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_EXPAND_UNKNOWN_MODE",
+                    message=f"unknown mode: {mode} (choose one of: append, merge, reconcile)",
+                    file=plan.get("__file__"),
+                    path="mode",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    expanded = expand_plan_dict(
+        plan,
+        outcome_root_ids=outcome_roots,
+        template=template,
+        templates=templates_map,
+        mode=mode,
+        reconcile_strict=reconcile_strict,
+    )
 
     # Must pass validate + lint
     g2, v2 = validate_plan(expanded)
