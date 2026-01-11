@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer
 
 from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
-from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
+from planner_ai_platform.core.expand.expand_plan import TEMPLATE_TASK_TITLES, dump_plan_yaml, expand_plan_dict
 from planner_ai_platform.core.io.load_plan import load_plan
 from planner_ai_platform.core.lint.lint_plan import lint_plan
 from planner_ai_platform.core.validate.validate_plan import summarize_plan, validate_plan
@@ -60,6 +60,11 @@ def expand(
     path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
     out: str = typer.Option(..., "--out", help="Path to write expanded YAML plan"),
     root: str | None = typer.Option(None, "--root", help="Expand only this OUTCOME node id"),
+    template: str = typer.Option(
+        "simple",
+        "--template",
+        help="Expansion template (deterministic): simple|dev|ops",
+    ),
 ) -> None:
     """Deterministically expand outcome roots into deliverables + tasks (Phase 3)."""
     try:
@@ -115,7 +120,20 @@ def expand(
             )
             raise typer.Exit(code=2)
 
-    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots)
+    if template not in TEMPLATE_TASK_TITLES:
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_EXPAND_UNKNOWN_TEMPLATE",
+                    message=f"unknown template: {template} (choose one of: {', '.join(sorted(TEMPLATE_TASK_TITLES.keys()))})",
+                    file=plan.get("__file__"),
+                    path="template",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    expanded = expand_plan_dict(plan, outcome_root_ids=outcome_roots, template=template)
 
     # Must pass validate + lint
     g2, v2 = validate_plan(expanded)

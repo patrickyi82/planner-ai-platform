@@ -12,6 +12,8 @@ pip install -e .[dev]
 planner --help
 planner validate examples/basic-plan.yaml
 planner lint examples/basic-plan.yaml
+planner expand examples/expand-input.yaml --out /tmp/expanded.yaml --template simple
+planner expand examples/expand-input.yaml --out /tmp/expanded-dev.yaml --template dev
 pytest
 ```
 

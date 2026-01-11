@@ -1,14 +1,34 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
-TASK_TITLES: list[str] = ["Design", "Implement", "Test", "Docs"]
+
+TEMPLATE_TASK_TITLES: dict[str, list[str]] = {
+    # Phase 3 baseline: keep this stable for golden tests.
+    "simple": ["Design", "Implement", "Test", "Docs"],
+    # Slightly richer dev lifecycle.
+    "dev": ["Design", "Implement", "Test", "Docs", "Review", "Release"],
+    # Ops-focused expansion.
+    # (Avoid using terms that can be interpreted as emergency/dispatch language.)
+    "ops": ["Monitoring", "SLOs", "Runbooks", "Playbooks", "Reliability"],
+}
 
 
-def expand_plan_dict(plan: dict[str, Any], *, outcome_root_ids: list[str]) -> dict[str, Any]:
-    """Return a new expanded plan dict (deterministic, no AI)."""
+def expand_plan_dict(
+    plan: dict[str, Any],
+    *,
+    outcome_root_ids: list[str],
+    template: str = "simple",
+) -> dict[str, Any]:
+    """Return a new expanded plan dict (deterministic, no AI).
+
+    Notes:
+    - This function is intentionally pure/deterministic for Phase 3.
+    - Callers should validate `template` against TEMPLATE_TASK_TITLES.
+    """
+
     schema_version = plan.get("schema_version")
     nodes = plan.get("nodes")
 
@@ -24,6 +44,8 @@ def expand_plan_dict(plan: dict[str, Any], *, outcome_root_ids: list[str]) -> di
         # Validator should have caught this; keep best-effort.
         out["nodes"] = nodes
         return out
+
+    task_titles = TEMPLATE_TASK_TITLES.get(template, TEMPLATE_TASK_TITLES["simple"])
 
     existing_ids = _collect_existing_ids(nodes)
     new_nodes: list[dict[str, Any]] = []
@@ -49,7 +71,7 @@ def expand_plan_dict(plan: dict[str, Any], *, outcome_root_ids: list[str]) -> di
 
         # Tasks under deliverable
         prev_task_id: str | None = None
-        for i, title in enumerate(TASK_TITLES, start=1):
+        for i, title in enumerate(task_titles, start=1):
             t_base = f"TSK-{out_id}-{i:02d}"
             t_id = _unique_id(t_base, existing_ids)
             existing_ids.add(t_id)
