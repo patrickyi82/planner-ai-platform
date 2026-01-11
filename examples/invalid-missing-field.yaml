@@ -1,0 +1,6 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Missing DoD"
+    depends_on: []

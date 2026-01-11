@@ -1,0 +1,49 @@
+schema_version: "0.1.0"
+nodes:
+  - id: OUT-001
+    type: outcome
+    title: "Planner platform validated plan format"
+    definition_of_done:
+      - "A plan file can be validated with a CLI command"
+      - "Errors are actionable (file/path/code/message)"
+    depends_on: []
+
+  - id: DEL-001
+    type: deliverable
+    title: "Schema v0 validator"
+    definition_of_done:
+      - "Validator checks required fields/types"
+      - "Unknown dependencies are detected"
+    depends_on: ["OUT-001"]
+
+  - id: MS-001
+    type: milestone
+    title: "CLI validate is usable"
+    definition_of_done:
+      - "`planner validate examples/basic-plan.yaml` exits 0"
+    depends_on: ["DEL-001"]
+
+  - id: TSK-001
+    type: task
+    title: "Implement loader"
+    definition_of_done:
+      - "YAML/JSON can be loaded"
+    depends_on: ["DEL-001"]
+    owner: "platform"
+    estimate_hours: 4
+    priority: 1
+
+  - id: TSK-002
+    type: task
+    title: "Implement validator"
+    definition_of_done:
+      - "Schema + roots + referential checks"
+    depends_on: ["DEL-001"]
+    estimate_hours: 6
+
+  - id: CHK-001
+    type: check
+    title: "Happy path validated"
+    definition_of_done:
+      - "CLI prints OK summary and roots"
+    depends_on: ["MS-001"]

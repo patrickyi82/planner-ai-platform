@@ -59,6 +59,19 @@ env/
 ENV/
 pip-wheel-metadata/
 
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+
 # -------------------------------------------------
 # Coverage / test outputs
 # -------------------------------------------------
