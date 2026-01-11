@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
 import typer
 
 from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
 from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
 from planner_ai_platform.core.expand.template_config import (
-    DEFAULT_TEMPLATES,
     TemplateConfigError,
     load_and_merge,
 )
@@ -23,41 +23,178 @@ def _callback() -> None:
 
 
 @app.command("validate")
-def validate(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)")) -> None:
+def validate(
+    path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
+    format: str = typer.Option("text", "--format", help="Output format: text|json"),
+) -> None:
     """Validate a plan file against schema v0."""
+    if format not in ("text", "json"):
+        err = PlanValidationError(
+            code="E_VALIDATE_UNKNOWN_FORMAT",
+            message=f"unknown format: {format} (choose one of: text, json)",
+            file=None,
+            path="format",
+        )
+        _print_errors([err])
+        raise typer.Exit(code=2)
+
+    def _to_item(e: PlanError) -> dict:
+        source = "load" if isinstance(e, PlanLoadError) else "validate"
+        return {
+            "code": e.code,
+            "message": e.message,
+            "file": e.file,
+            "path": e.path,
+            "severity": "error",
+            "source": source,
+        }
+
+    def _emit_json(
+        ok: bool,
+        *,
+        exit_code: int,
+        schema_version: str | None,
+        errors: list[PlanError],
+        summary: dict | None,
+    ) -> None:
+        payload = {
+            "tool": "planner",
+            "command": "validate",
+            "schema_version": schema_version,
+            "ok": ok,
+            "error_count": len(errors),
+            "errors": [_to_item(e) for e in errors],
+            "summary": summary,
+        }
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+        raise typer.Exit(code=exit_code)
+
     try:
         plan = load_plan(path)
     except PlanLoadError as e:
+        if format == "json":
+            _emit_json(
+                False,
+                exit_code=1,
+                schema_version=None,
+                errors=[e],
+                summary=None,
+            )
         _print_errors([e])
         raise typer.Exit(code=1)
 
     graph, errors = validate_plan(plan)
     if errors:
+        if format == "json":
+            schema_v = (
+                plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+            )
+            _emit_json(
+                False,
+                exit_code=2,
+                schema_version=schema_v,
+                errors=errors,
+                summary=None,
+            )
         _print_errors(errors)
         raise typer.Exit(code=2)
 
     assert graph is not None
-    typer.echo(summarize_plan(graph))
+
+    if format == "text":
+        typer.echo(summarize_plan(graph))
+        return
+
+    # JSON success output
+    from collections import Counter
+
+    counts = Counter([n.type for n in graph.nodes_by_id.values()])
+    summary = {
+        "node_count": len(graph.nodes_by_id),
+        "type_counts": {k: int(v) for k, v in counts.items()},
+        "roots": list(graph.roots),
+    }
+
+    _emit_json(
+        True,
+        exit_code=0,
+        schema_version=graph.schema_version,
+        errors=[],
+        summary=summary,
+    )
 
 
 @app.command("lint")
-def lint(path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)")) -> None:
+def lint(
+    path: str = typer.Argument(..., help="Path to a plan file (.yaml/.yml/.json)"),
+    format: str = typer.Option("text", "--format", help="Output format: text|json"),
+) -> None:
     """Lint a plan file (rules beyond minimal schema validation)."""
+    SDF_VERSION = "v0"
+
+    if format not in ("text", "json"):
+        # treat as a validation-style error
+        err = PlanValidationError(
+            code="E_LINT_UNKNOWN_FORMAT",
+            message=f"unknown format: {format} (choose one of: text, json)",
+            file=None,
+            path="format",
+        )
+        _print_errors([err])
+        raise typer.Exit(code=2)
+
+    def _to_item(e: PlanError) -> dict:
+        code = getattr(e, "code", "E_UNKNOWN")
+        source = (
+            "lint" if code.startswith("L_") else "validate" if code.startswith("E_") else "unknown"
+        )
+        return {
+            "code": e.code,
+            "message": e.message,
+            "file": e.file,
+            "path": e.path,
+            "severity": "error",  # Phase 2 currently treats all lint findings as errors
+            "source": source,
+        }
+
+    def _emit_json(ok: bool, errors: list[PlanError], exit_code: int) -> None:
+        payload = {
+            "tool": "planner",
+            "command": "lint",
+            "sdf_version": SDF_VERSION,
+            "ok": ok,
+            "error_count": len(errors),
+            "errors": [_to_item(e) for e in errors],
+        }
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+        raise typer.Exit(code=exit_code)
+
+    # Load plan
     try:
         plan = load_plan(path)
     except PlanLoadError as e:
+        if format == "json":
+            _emit_json(False, [e], 1)
         _print_errors([e])
         raise typer.Exit(code=1)
 
     lint_errors = lint_plan(plan)
     _, validation_errors = validate_plan(plan)
+    errors: list[PlanError] = lint_errors + validation_errors
 
-    errors = lint_errors + validation_errors
+    # Text output
+    if format == "text":
+        typer.echo(f"SDF {SDF_VERSION}")
+        if errors:
+            _print_errors(errors)
+            raise typer.Exit(code=2)
+        typer.echo("OK: lint passed")
+        return
+
+    # JSON output
     if errors:
-        _print_errors(errors)
-        raise typer.Exit(code=2)
-
-    typer.echo("OK: lint passed")
+        _emit_json(False, errors, 2)
+    _emit_json(True, [], 0)
 
 
 @app.command("templates")
@@ -167,7 +304,9 @@ def expand(
             raise typer.Exit(code=2)
         outcome_roots = [root]
     else:
-        outcome_roots = sorted([rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"])
+        outcome_roots = sorted(
+            [rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"]
+        )
         if not outcome_roots:
             _print_errors(
                 [

@@ -236,7 +236,6 @@ def validate_plan(plan: dict[str, Any]) -> tuple[Optional[PlanGraph], list[PlanV
                             file=file,
                             path=f"root_ids[{ri}]",
                         )
-                        
                     )
                 else:
                     if nodes_by_id[rid].depends_on:
@@ -281,7 +280,12 @@ def summarize_plan(graph: PlanGraph) -> str:
     counts = Counter([n.type for n in graph.nodes_by_id.values()])
     ordered_types: list[str] = ["outcome", "deliverable", "milestone", "task", "check"]
     parts = [f"{t}={counts.get(t, 0)}" for t in ordered_types]
-    return f"OK: {len(graph.nodes_by_id)} nodes (" + ", ".join(parts) + ")\nRoots: " + ", ".join(graph.roots)
+    return (
+        f"OK: {len(graph.nodes_by_id)} nodes ("
+        + ", ".join(parts)
+        + ")\nRoots: "
+        + ", ".join(graph.roots)
+    )
 
 
 def _sorted(errors: Iterable[PlanValidationError]) -> list[PlanValidationError]:

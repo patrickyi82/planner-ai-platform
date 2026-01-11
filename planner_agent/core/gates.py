@@ -98,7 +98,7 @@ def run_gate(repo_root: Path, gate: Gate, timeout_s: int = 900) -> GateResult:
 
 def run_gates(repo_root: Path, gates: list[Gate] | None = None) -> list[GateResult]:
     results: list[GateResult] = []
-    for g in (gates or DEFAULT_GATES):
+    for g in gates or DEFAULT_GATES:
         results.append(run_gate(repo_root, g))
         if not results[-1].ok:
             break

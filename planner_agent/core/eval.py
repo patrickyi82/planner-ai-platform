@@ -66,7 +66,11 @@ def load_suite(path: Path) -> list[EvalCase]:
 
     data = yaml.safe_load(p.read_text(encoding="utf-8"))
     if isinstance(data, list):
-        return [_case_from_obj(item, f"case:{i}") for i, item in enumerate(data) if isinstance(item, dict)]
+        return [
+            _case_from_obj(item, f"case:{i}")
+            for i, item in enumerate(data)
+            if isinstance(item, dict)
+        ]
     if isinstance(data, dict):
         return [_case_from_obj(data, p.stem)]
     raise ValueError(f"Unsupported suite format: {p}")
@@ -112,7 +116,15 @@ def run_eval(
     out_jsonl.parent.mkdir(parents=True, exist_ok=True)
 
     totals: dict[str, dict[str, float]] = {
-        m: {"runs": 0.0, "ok": 0.0, "seconds": 0.0, "fixes": 0.0, "calls": 0.0, "in_tokens": 0.0, "out_tokens": 0.0}
+        m: {
+            "runs": 0.0,
+            "ok": 0.0,
+            "seconds": 0.0,
+            "fixes": 0.0,
+            "calls": 0.0,
+            "in_tokens": 0.0,
+            "out_tokens": 0.0,
+        }
         for m in models_list
     }
 
@@ -143,7 +155,9 @@ def run_eval(
                         "seconds": elapsed,
                         "patches": len(rr.applied_patches),
                         "fix_patches": fixes,
-                        "gates": [{"name": g.name, "ok": g.ok, "exit_code": g.exit_code} for g in rr.gates],
+                        "gates": [
+                            {"name": g.name, "ok": g.ok, "exit_code": g.exit_code} for g in rr.gates
+                        ],
                         "llm": {
                             "calls": getattr(rr, "llm_calls", 0),
                             "input_tokens": getattr(rr, "llm_input_tokens", 0),
@@ -181,4 +195,6 @@ def run_eval(
 def _run_one(repo_root: Path, spec: SliceSpec, model: str, workers: int, max_fix_rounds: int):
     import asyncio
 
-    return asyncio.run(run_slice(repo_root, spec, workers=workers, max_fix_rounds=max_fix_rounds, model=model))
+    return asyncio.run(
+        run_slice(repo_root, spec, workers=workers, max_fix_rounds=max_fix_rounds, model=model)
+    )

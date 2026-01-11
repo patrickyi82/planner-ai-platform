@@ -69,7 +69,13 @@ def _effective_gates() -> list[Gate]:
     return gates
 
 
-async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_rounds: int = 3, model: str | None = None) -> RunResult:
+async def run_slice(
+    repo_root: Path,
+    spec: SliceSpec,
+    workers: int = 3,
+    max_fix_rounds: int = 3,
+    model: str | None = None,
+) -> RunResult:
     snapshot = RepoSnapshot(root=repo_root)
     repomap = build_repomap(snapshot).to_text()
 
@@ -98,7 +104,10 @@ async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_
 
     base_user = (
         f"Goal: {spec.goal}\n\n"
-        f"Acceptance criteria:\n" + "\n".join([f"- {a}" for a in spec.acceptance]) + "\n\n" + repomap
+        f"Acceptance criteria:\n"
+        + "\n".join([f"- {a}" for a in spec.acceptance])
+        + "\n\n"
+        + repomap
     )
 
     # Phase 1: propose patches in parallel (thinking).
@@ -156,4 +165,3 @@ async def run_slice(repo_root: Path, spec: SliceSpec, workers: int = 3, max_fix_
         llm_input_tokens=llm.input_tokens,
         llm_output_tokens=llm.output_tokens,
     )
-

@@ -57,7 +57,9 @@ def run_cmd(
     repo_root = find_repo_root()
     spec = default_slice(goal)
 
-    rr = asyncio.run(run_slice(Path(repo_root), spec, workers=workers, max_fix_rounds=max_fix_rounds))
+    rr = asyncio.run(
+        run_slice(Path(repo_root), spec, workers=workers, max_fix_rounds=max_fix_rounds)
+    )
 
     if Table and console:
         table = Table(title="planner-agent run")
@@ -89,16 +91,23 @@ def run_cmd(
         print(rr.gates[-1].output)
         raise typer.Exit(code=2)
 
+
 @app.command("eval")
 def eval_cmd(
     suite: Path = typer.Option(..., "--suite", help="Suite file or directory (YAML)"),
-    models: list[str] = typer.Option(..., "--model", "-m", help="Model (repeatable): -m gpt-5-mini -m gpt-5.2-pro"),
+    models: list[str] = typer.Option(
+        ..., "--model", "-m", help="Model (repeatable): -m gpt-5-mini -m gpt-5.2-pro"
+    ),
     runs: int = typer.Option(3, help="Runs per case per model"),
     workers: int = typer.Option(3, help="Concurrent workers for proposal generation"),
     max_fix_rounds: int = typer.Option(3, help="Max fixer iterations after failed gate"),
     out: Path = typer.Option(Path("eval/results.jsonl"), "--out", help="Output JSONL path"),
-    allow_dirty: bool = typer.Option(False, help="Allow uncommitted changes (only safe with --no-worktrees)"),
-    no_worktrees: bool = typer.Option(False, "--no-worktrees", help="Run eval in-place (unsafe; modifies your working tree)"),
+    allow_dirty: bool = typer.Option(
+        False, help="Allow uncommitted changes (only safe with --no-worktrees)"
+    ),
+    no_worktrees: bool = typer.Option(
+        False, "--no-worktrees", help="Run eval in-place (unsafe; modifies your working tree)"
+    ),
     keep_worktrees: bool = typer.Option(False, help="Keep worktrees (debugging)"),
 ) -> None:
     """Benchmark models against a suite; writes JSONL and prints a summary."""
@@ -128,7 +137,7 @@ def eval_cmd(
             table.add_row(
                 m,
                 str(s["runs"]),
-                f"{s['success_rate']*100:.0f}%",
+                f"{s['success_rate'] * 100:.0f}%",
                 f"{s['avg_seconds']:.2f}",
                 f"{s['avg_fix_patches']:.2f}",
                 f"{s['avg_input_tokens']:.0f}",
@@ -138,6 +147,7 @@ def eval_cmd(
         console.print(f"\nWrote: {summary['out']}")
     else:
         print(summary)
+
 
 def main() -> None:
     app(prog_name="planner-agent")

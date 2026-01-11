@@ -76,7 +76,9 @@ def expand_plan_dict(
     tasks_by_title: dict[str, list[str]] = {}
     tasks_by_title_and_del: dict[tuple[str, str], list[str]] = {}
     if mode == "reconcile":
-        deliverable_ids_by_title, tasks_by_title, tasks_by_title_and_del = _index_existing_for_reconcile(nodes)
+        deliverable_ids_by_title, tasks_by_title, tasks_by_title_and_del = (
+            _index_existing_for_reconcile(nodes)
+        )
 
     for out_id in outcome_root_ids:
         deliverable_title = f"Deliver: {out_id}"
@@ -122,7 +124,12 @@ def expand_plan_dict(
 
                 if t_candidates:
                     t_id = sorted(t_candidates)[0]
-                    _reconcile_task(node_by_id[t_id], deliverable_id=del_id, prev_task_id=prev_task_id, title=title)
+                    _reconcile_task(
+                        node_by_id[t_id],
+                        deliverable_id=del_id,
+                        prev_task_id=prev_task_id,
+                        title=title,
+                    )
                     # If we reconciled by title-only (non-strict), it now depends on del_id; register it.
                     tasks_by_title.setdefault(task_title, []).append(t_id)
                     tasks_by_title_and_del.setdefault((task_title, del_id), []).append(t_id)
@@ -134,7 +141,9 @@ def expand_plan_dict(
             t_id = _unique_id(t_base, existing_ids)
             existing_ids.add(t_id)
 
-            deps = _normalize_depends([], required=[del_id] + ([prev_task_id] if prev_task_id else []))
+            deps = _normalize_depends(
+                [], required=[del_id] + ([prev_task_id] if prev_task_id else [])
+            )
 
             new_nodes.append(
                 {
@@ -175,7 +184,9 @@ def dump_plan_yaml(plan: dict[str, Any], path: str) -> None:
         yaml.safe_dump(plan, f, sort_keys=False, default_flow_style=False, allow_unicode=True)
 
 
-def _create_deliverable(out_id: str, deliverable_title: str, existing_ids: set[str], new_nodes: list[dict[str, Any]]) -> str:
+def _create_deliverable(
+    out_id: str, deliverable_title: str, existing_ids: set[str], new_nodes: list[dict[str, Any]]
+) -> str:
     del_base = f"DEL-{out_id}-01"
     del_id = _unique_id(del_base, existing_ids)
     existing_ids.add(del_id)
@@ -296,7 +307,9 @@ def _reconcile_deliverable(node: dict[str, Any], out_id: str) -> None:
     node["definition_of_done"] = dod_clean
 
 
-def _reconcile_task(node: dict[str, Any], *, deliverable_id: str, prev_task_id: str | None, title: str) -> None:
+def _reconcile_task(
+    node: dict[str, Any], *, deliverable_id: str, prev_task_id: str | None, title: str
+) -> None:
     # Ensure required deps
     depends = node.get("depends_on")
     if not isinstance(depends, list):
