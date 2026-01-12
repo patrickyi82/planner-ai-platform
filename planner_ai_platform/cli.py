@@ -89,7 +89,9 @@ def validate(
     graph, errors = validate_plan(plan)
     if errors:
         if format == "json":
-            schema_v = plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+            schema_v = (
+                plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+            )
             _emit_json(
                 False,
                 exit_code=2,
@@ -145,7 +147,9 @@ def lint(
 
     def _to_item(e: PlanError) -> dict:
         code = getattr(e, "code", "E_UNKNOWN")
-        source = "lint" if code.startswith("L_") else "validate" if code.startswith("E_") else "unknown"
+        source = (
+            "lint" if code.startswith("L_") else "validate" if code.startswith("E_") else "unknown"
+        )
         return {
             "code": e.code,
             "message": e.message,
@@ -298,7 +302,9 @@ def expand(
             raise typer.Exit(code=2)
         outcome_roots = [root]
     else:
-        outcome_roots = sorted([rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"])
+        outcome_roots = sorted(
+            [rid for rid in graph.roots if graph.nodes_by_id[rid].type == "outcome"]
+        )
         if not outcome_roots:
             _print_errors(
                 [
@@ -394,7 +400,9 @@ def ai_expand_cmd(
     template: str = typer.Option("dev", "--template"),
     template_file: str | None = typer.Option(None, "--template-file"),
     base_url: str | None = typer.Option(None, "--base-url"),
-    min_changes: int = typer.Option(1, "--min-changes", help="Require at least this many edits from the model"),
+    min_changes: int = typer.Option(
+        1, "--min-changes", help="Require at least this many edits from the model"
+    ),
 ) -> None:
     """AI-assisted expand (Phase 4): bounded propose→apply→gate loop."""
     try:
@@ -465,7 +473,9 @@ def ai_expand_cmd(
             return GateResult(ok=False, errors=[str(e) for e in l_errors])
         return GateResult(ok=True, errors=[])
 
-    def build_context(plan_dict: dict[str, Any], gate_result: GateResult, round_idx: int) -> dict[str, Any]:
+    def build_context(
+        plan_dict: dict[str, Any], gate_result: GateResult, round_idx: int
+    ) -> dict[str, Any]:
         return {
             "round": round_idx,
             "template": template,
@@ -555,7 +565,9 @@ def _simple_summary(plan: dict[str, Any]) -> dict[str, Any]:
             elif deps is None:
                 inferred_roots.append(nid)
 
-    schema_version = plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+    schema_version = (
+        plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+    )
 
     return {
         "schema_version": schema_version,

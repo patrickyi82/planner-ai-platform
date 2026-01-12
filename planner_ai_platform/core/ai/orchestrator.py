@@ -78,7 +78,9 @@ def ai_expand(
                 plan=current,
                 rounds=round_idx,
                 applied=applied,
-                last_gate=GateResult(ok=False, errors=["LLM produced no proposals"] + proposal_errors[:5]),
+                last_gate=GateResult(
+                    ok=False, errors=["LLM produced no proposals"] + proposal_errors[:5]
+                ),
             )
 
         best_candidate: tuple[int, ApplyPatchResult, GateResult] | None = None
@@ -106,7 +108,12 @@ def ai_expand(
             errs = [
                 f"No proposal met min_changes={min_changes}.",
             ]
-            return AIExpandResult(plan=current, rounds=round_idx, applied=applied, last_gate=GateResult(ok=False, errors=errs))
+            return AIExpandResult(
+                plan=current,
+                rounds=round_idx,
+                applied=applied,
+                last_gate=GateResult(ok=False, errors=errs),
+            )
 
         _, applied_res, gate = best_candidate
         applied.append(applied_res)

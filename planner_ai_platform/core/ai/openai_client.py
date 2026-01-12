@@ -159,7 +159,9 @@ class OpenAIPatchClient:
         try:
             from openai import OpenAI  # type: ignore
         except Exception as e:
-            raise RuntimeError("openai package not installed; install with: pip install openai") from e
+            raise RuntimeError(
+                "openai package not installed; install with: pip install openai"
+            ) from e
 
         client = OpenAI(base_url=self._base_url) if self._base_url else OpenAI()
 
