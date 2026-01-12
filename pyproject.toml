@@ -24,6 +24,7 @@ agents = [
   "openai>=1.40.0",
   "rich>=13.7.0",
 ]
+ai = ["openai>=1.0.0"]
 
 [project.scripts]
 planner = "planner_ai_platform.cli:cli"
