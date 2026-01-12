@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
+from typing import Any
+
 import typer
 
+from planner_ai_platform.core.ai.openai_client import OpenAIPatchClient
+from planner_ai_platform.core.ai.orchestrator import GateResult, ai_expand
 from planner_ai_platform.core.errors import PlanError, PlanLoadError, PlanValidationError
 from planner_ai_platform.core.expand.expand_plan import dump_plan_yaml, expand_plan_dict
-from planner_ai_platform.core.expand.template_config import (
-    TemplateConfigError,
-    load_and_merge,
-)
+from planner_ai_platform.core.expand.template_config import TemplateConfigError, load_and_merge
 from planner_ai_platform.core.io.load_plan import load_plan
 from planner_ai_platform.core.lint.lint_plan import lint_plan
 from planner_ai_platform.core.validate.validate_plan import summarize_plan, validate_plan
@@ -133,7 +136,6 @@ def lint(
     SDF_VERSION = "v0"
 
     if format not in ("text", "json"):
-        # treat as a validation-style error
         err = PlanValidationError(
             code="E_LINT_UNKNOWN_FORMAT",
             message=f"unknown format: {format} (choose one of: text, json)",
@@ -153,7 +155,7 @@ def lint(
             "message": e.message,
             "file": e.file,
             "path": e.path,
-            "severity": "error",  # Phase 2 currently treats all lint findings as errors
+            "severity": "error",
             "source": source,
         }
 
@@ -169,7 +171,6 @@ def lint(
         typer.echo(json.dumps(payload, indent=2, sort_keys=True))
         raise typer.Exit(code=exit_code)
 
-    # Load plan
     try:
         plan = load_plan(path)
     except PlanLoadError as e:
@@ -182,7 +183,6 @@ def lint(
     _, validation_errors = validate_plan(plan)
     errors: list[PlanError] = lint_errors + validation_errors
 
-    # Text output
     if format == "text":
         typer.echo(f"SDF {SDF_VERSION}")
         if errors:
@@ -191,7 +191,6 @@ def lint(
         typer.echo("OK: lint passed")
         return
 
-    # JSON output
     if errors:
         _emit_json(False, errors, 2)
     _emit_json(True, [], 0)
@@ -276,7 +275,6 @@ def expand(
         _print_errors(errors)
         raise typer.Exit(code=2)
 
-    # Select outcome roots
     if root is not None:
         if root not in graph.nodes_by_id:
             _print_errors(
@@ -382,7 +380,6 @@ def expand(
         reconcile_strict=reconcile_strict,
     )
 
-    # Must pass validate + lint
     g2, v2 = validate_plan(expanded)
     l2 = lint_plan(expanded)
     if v2 or l2 or g2 is None:
@@ -391,6 +388,194 @@ def expand(
 
     dump_plan_yaml(expanded, out)
     typer.echo(f"OK: wrote expanded plan to {out}")
+
+
+@app.command("ai-expand")
+def ai_expand_cmd(
+    path: str = typer.Argument(...),
+    out: str = typer.Option(..., "--out"),
+    model: str = typer.Option("gpt-4.1-mini", "--model"),
+    workers: int = typer.Option(3, "--workers"),
+    max_fix_rounds: int = typer.Option(3, "--max-fix-rounds"),
+    template: str = typer.Option("dev", "--template"),
+    template_file: str | None = typer.Option(None, "--template-file"),
+    base_url: str | None = typer.Option(None, "--base-url"),
+    min_changes: int = typer.Option(
+        1, "--min-changes", help="Require at least this many edits from the model"
+    ),
+) -> None:
+    """AI-assisted expand (Phase 4): bounded propose→apply→gate loop."""
+    try:
+        plan = load_plan(path)
+    except PlanLoadError as e:
+        _print_errors([e])
+        raise typer.Exit(code=1)
+
+    if not os.getenv("OPENAI_API_KEY"):
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_AI_EXPAND_NO_API_KEY",
+                    message="OPENAI_API_KEY is not set",
+                    file=None,
+                    path="OPENAI_API_KEY",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        templates_map = load_and_merge(template_file)
+    except FileNotFoundError:
+        _print_errors(
+            [
+                PlanLoadError(
+                    code="E_TEMPLATE_FILE_NOT_FOUND",
+                    message=f"template file not found: {template_file}",
+                    file=plan.get("__file__"),
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=1)
+    except TemplateConfigError as e:
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_TEMPLATE_FILE_INVALID",
+                    message=str(e),
+                    file=plan.get("__file__"),
+                    path="template_file",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    if template not in templates_map:
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_AI_EXPAND_UNKNOWN_TEMPLATE",
+                    message=f"unknown template: {template} (choose one of: {', '.join(sorted(templates_map.keys()))})",
+                    file=plan.get("__file__"),
+                    path="template",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    def gates(plan_dict: dict[str, Any]) -> GateResult:
+        _, v_errors = validate_plan(plan_dict)
+        if v_errors:
+            return GateResult(ok=False, errors=[str(e) for e in v_errors])
+        l_errors = lint_plan(plan_dict)
+        if l_errors:
+            return GateResult(ok=False, errors=[str(e) for e in l_errors])
+        return GateResult(ok=True, errors=[])
+
+    def build_context(
+        plan_dict: dict[str, Any], gate_result: GateResult, round_idx: int
+    ) -> dict[str, Any]:
+        return {
+            "round": round_idx,
+            "template": template,
+            "template_file": template_file,
+            "templates_available": templates_map,
+            "selected_template_steps": templates_map.get(template, []),
+            "min_changes": min_changes,
+            "gate_errors": gate_result.errors,
+            "plan_summary": _simple_summary(plan_dict),
+            "nodes": plan_dict.get("nodes", []),
+        }
+
+    llm = OpenAIPatchClient(base_url=base_url)
+    result = ai_expand(
+        plan=plan,
+        llm=llm,
+        model=model,
+        build_context=build_context,
+        gates=gates,
+        workers=workers,
+        max_fix_rounds=max_fix_rounds,
+        min_changes=min_changes,
+    )
+
+    if len(result.applied) == 0:
+        extra = ""
+        if result.last_gate.errors:
+            extra = " | " + " ; ".join(result.last_gate.errors[:5])
+        _print_errors(
+            [
+                PlanValidationError(
+                    code="E_AI_EXPAND_NO_CHANGES",
+                    message=f"AI returned no edits (min_changes={min_changes}). Try increasing workers or re-running.{extra}",
+                    file=plan.get("__file__"),
+                    path="ai_expand",
+                )
+            ]
+        )
+        raise typer.Exit(code=2)
+
+    _write_yaml(out, result.plan)
+    typer.echo(f"OK: wrote {out} (rounds={result.rounds}, applied={len(result.applied)})")
+
+    if not result.last_gate.ok:
+        typer.echo("WARN: still failing gates:", err=True)
+        for e in result.last_gate.errors:
+            typer.echo(e, err=True)
+        raise typer.Exit(code=2)
+
+
+def _write_yaml(path: str, plan: dict[str, Any]) -> None:
+    p = Path(path)
+    if str(p.parent) not in (".", ""):
+        p.parent.mkdir(parents=True, exist_ok=True)
+    dump_plan_yaml(plan, str(p))
+
+
+def _simple_summary(plan: dict[str, Any]) -> dict[str, Any]:
+    nodes = plan.get("nodes")
+    if not isinstance(nodes, list):
+        nodes_list: list[Any] = []
+    else:
+        nodes_list = nodes
+
+    type_counts: dict[str, int] = {}
+    inferred_roots: list[str] = []
+
+    declared_roots: list[str] = []
+    root_ids = plan.get("root_ids")
+    if isinstance(root_ids, list):
+        declared_roots = [x for x in root_ids if isinstance(x, str)]
+
+    for n in nodes_list:
+        if not isinstance(n, dict):
+            continue
+        ntype = n.get("type")
+        if isinstance(ntype, str):
+            type_counts[ntype] = type_counts.get(ntype, 0) + 1
+
+        nid = n.get("id")
+        deps = n.get("depends_on")
+        if isinstance(nid, str):
+            if isinstance(deps, list):
+                dep_ids = [d for d in deps if isinstance(d, str)]
+                if not dep_ids:
+                    inferred_roots.append(nid)
+            elif deps is None:
+                inferred_roots.append(nid)
+
+    schema_version = (
+        plan.get("schema_version") if isinstance(plan.get("schema_version"), str) else None
+    )
+
+    return {
+        "schema_version": schema_version,
+        "node_count": len(nodes_list),
+        "type_counts": type_counts,
+        "declared_roots": declared_roots,
+        "inferred_roots": sorted(set(inferred_roots)),
+    }
 
 
 def _print_errors(errors: list[PlanError]) -> None:
